@@ -1,0 +1,80 @@
+---
+title: "Spatial data visualization"
+author: "Claire Meuter"
+date: "2023-03-18"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=TRUE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(tidyverse) #always 
+library(here) #ease to read files in 
+library(sf) #sf packafe for shp file work 
+library(tmap) #interactive mapping
+
+```
+# Task 1 objectives and data  
+
+## Objectives
+I will be exploring oil spill data in California in 2008. Exploration will include: 
+- Making an exploratory interactive map in tmap showing the location of oil spill events 
+- Making a finalized static choropleth map in ggplot in which the fill color for each county depends on the count of inland oil spill events by county for the 2008 oil spill data
+
+## Data 
+This homework uses data from California Department of Fish and Wildlife on oil spill incident data across California, as pulled from the OSPR Incident Tracking Database. As described on CA.gov: " The OSPR Incident Tracking Database System project was initiated to provide OSPR with oil spill incident data for statistical evaluation and justification for program planning, drills and exercise training and development, legislative analysis, budget preparation, to inform and educate the public and analyze OSPRs overall spill preparedness and response performance." The database defines an oil spill incident as "a discharge or threatened discharge of petroleum or other deleterious material into the waters of the state."
+
+Citations: 
+Lampinen, M. (2020, Jan. 31). Oil Spill Incident Tracking [ds394]. Calif. Dept. of Fish and Wildlife. Biogeographic Information and Observation System (BIOS). Retrieved March 18, 2020 from https://gis.data.ca.gov/datasets/7464e3d6f4924b50ad06e5a553d71086_0/explore?location=37.191046%2C-118.647988%2C6.47
+
+CA Counties. 
+
+```{r}
+# data exploration and cleaning 
+## read in the data 
+oil_spill <- read_csv(here("data","Oil_Spill_Incident_Tracking.csv"))  %>% 
+  janitor::clean_names() #cleaning up the column names 
+## Read in the counties data 
+ca_counties <- read_sf(here("data","ca_counties","CA_Counties_TIGER2016.shp")) %>% 
+  janitor::clean_names() %>% 
+  dplyr::select(county_name = name, land_area = aland)
+
+
+#I want this data to be spatial, so I should convert it to a sf 
+
+oil_spill_sf <- st_as_sf(oil_spill, coords = c("x","y"), crs=st_crs(ca_counties)) 
+#st_crs(oil_spill_sf)
+#quick plot to see if things look okay 
+#plot(oil_spill_sf$geometry)
+```
+
+## Interactive Map exploring
+```{r}
+# making my tmap 
+oil_map <- tm_shape(oil_spill_sf) +
+  tm_dots(col = "specificlo", id = "dateofinci", title = "Location type") +
+  tm_layout(title = "Oil Spill across California in 2008") +
+  tmap_mode("view")
+
+oil_map
+```
+## Choropleth Map 
+```{r}
+# First I need to join my points to my CA counties shp
+joined_spills_sf <- ca_counties %>% 
+  st_join(oil_spill_sf)
+
+#now I need to find the counts of points for each county
+oil_counts_sf <- joined_spills_sf %>% 
+  group_by(county_name) %>% 
+  summarize(n_records = sum(!is.na(objectid))) #Turns NAs to a false (ie false is basically zero) SO all the records that are true (not na) get counted up that way, and our NAs are treated as 0s
+```
+
+```{r}
+# making the choropeleth
+ggplot(data = oil_counts_sf) +
+  geom_sf(aes(fill = n_records), color = "grey20", size = 0.1) +
+  scale_fill_gradientn(colors = c("lightgrey", "orange", "red")) 
+```
+
