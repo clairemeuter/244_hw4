@@ -1,0 +1,54 @@
+---
+title: 'Task 2: Willamette Falls fish passage time series summary'
+author: "Claire Meuter"
+date: "2023-03-19"
+output: 
+  html_document:
+    theme: journal
+    code_folding: hide
+---
+
+```{r setup, include=TRUE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(here)
+library(lubridate)
+```
+## Overview {.tabset}
+-An engaging image (with caption, incl. photo credit) that is relevant to the dataset
+-A brief summary (3 - 4 sentences) of the dataset, and what is included in this report
+-A map of the fish ladder location (you can make this in R on your own, or include an existing map appropriately licensed, with attribution)
+-A professionally formatted data citation
+
+### Original Time Series 
+```{r}
+# read in the data and usual clean up 
+fish <- read_csv(here("data","willamette_fish_passage.csv")) %>% 
+  janitor::clean_names() %>% 
+  select(date, steelhead, coho, jack_coho) %>% #selecting for the fish of interest 
+  replace(is.na(.),0) %>%  #replacing nas with 0 
+  mutate(date = lubridate::mdy(date)) #making my date column class: date 
+
+  
+#Now I need to covert the df to tsibble (a times series df )
+fish_ts <- fish %>% 
+  as_tibble(key = NULL, index = date)
+
+# pivot data so species is in same column 
+fish_ts_pivot <- fish_ts %>% 
+  pivot_longer(cols = 2:4, names_to = "species", values_to = "count")
+
+
+## Now i can visualize the data 
+ggplot(data = fish_ts_pivot, aes(x = date, y = count, color = species)) +
+  geom_line() + 
+  facet_wrap(~species, nrow = 3)
+
+```
+
+
+### tab 2
+(content)
+
+### tab 3 
+(content)
