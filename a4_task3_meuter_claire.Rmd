@@ -1,0 +1,84 @@
+---
+title: "Text wrangling and analysis"
+author: "Claire Meuter"
+date: "2023-03-19"
+output: html_document
+---
+
+```{r setup, include=TRUE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(tidytext)
+library(here)
+library(textdata)
+library(pdftools)
+library(ggwordcloud)
+library(readtext)
+```
+
+## Overview
+```{r}
+#read in the text with readtext()
+hate_txt <- pdf_text(here::here("data", "trans_hate_transcript.pdf"))
+
+## wrangle txt into a dataframe
+hate_df <- data.frame(hate_txt) %>% 
+  mutate(page = 1:n()) %>% 
+  mutate(text_full = str_split(hate_txt, pattern = '\\n')) %>% 
+  unnest(text_full) %>% 
+  mutate(text_full = str_squish(text_full))
+
+## tidying this data further, unnesting the words 
+hate_df_clean <- hate_df %>% 
+  # #split up words here
+  unnest_tokens(word, text_full, token = 'words') %>% 
+  select(word) #keeping only the word column 
+
+
+# Next I remove stop words, basically words in english that are super common
+hate_speech_clean <- hate_df_clean %>% 
+  anti_join(stop_words, by = 'word') # dropping stop_words
+
+
+#Now I can count the top 30 most used words in this speech (excluding stop words)
+# first I need to count the words overall
+hate_wordcount <- hate_speech_clean %>% 
+  count(word)
+
+#next i find the top 30 
+hate_speech_top_30 <- hate_wordcount %>% 
+  slice_max(order_by = n, n = 30)
+
+hate_cloud <- ggplot(data = hate_speech_top_30, aes(label = word)) +
+  geom_text_wordcloud(
+    aes(color = n, size = n),  grid_size = 0.5, shape = "diamond") + 
+  scale_color_gradientn(colors = c("darkblue","blue","red")) +
+  theme_minimal()
+
+hate_cloud
+
+```
+
+## Sentiment analysis
+For this sentiment analysis, I will be using the bing lexicon. This lexicon uses a list of english words and their associations with positive and negative categories. 
+
+```{r}
+# first I'll read in the lexicon 
+bing <- get_sentiments(lexicon = "bing")
+
+#join the words to their associated sentiment 
+speech_bing <- hate_speech_clean %>% 
+  inner_join(bing, by = "word")
+
+#now I'll count the number of words for each sentiment 
+speech_rc_counts <- speech_bing %>% 
+  count(sentiment)
+
+## visualize 
+ggplot(data = speech_rc_counts, 
+       aes(x = n, y = reorder(sentiment,n))) +
+  geom_col() +
+  scale_fill_manual(values = c("positive"="forestgreen", "negative"="darkred")) +
+  theme_minimal()
+```
+
