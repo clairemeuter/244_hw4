@@ -2,7 +2,10 @@
 title: "Text wrangling and analysis"
 author: "Claire Meuter"
 date: "2023-03-19"
-output: html_document
+output: 
+  html_document:
+    theme: paper
+    code_folding: hide
 ---
 
 ```{r setup, include=TRUE, warning = FALSE, message = FALSE}
@@ -76,6 +79,30 @@ speech_rc_counts <- speech_bing %>%
 
 ## visualize 
 ggplot(data = speech_rc_counts, 
+       aes(x = n, y = reorder(sentiment,n))) +
+  geom_col() +
+  scale_fill_manual(values = c("positive"="forestgreen", "negative"="darkred")) +
+  theme_minimal()
+```
+
+
+#adding 'transgenderism' to the bing lexicon with a negative association
+
+```{r}
+new_row = c(word = "transgenderism", sentiment = "negative")
+
+bing_trans = rbind(bing, new_row)
+
+#join the words to their associated sentiment 
+speech_bing2 <- hate_speech_clean %>% 
+  inner_join(bing_trans, by = "word")
+
+#now I'll count the number of words for each sentiment 
+speech_rc_counts2 <- speech_bing2 %>% 
+  count(sentiment)
+
+## visualize 
+ggplot(data = speech_rc_counts2, 
        aes(x = n, y = reorder(sentiment,n))) +
   geom_col() +
   scale_fill_manual(values = c("positive"="forestgreen", "negative"="darkred")) +

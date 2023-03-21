@@ -4,7 +4,7 @@ author: "Claire Meuter"
 date: "2023-03-19"
 output: 
   html_document:
-    theme: cosmo
+    theme: paper
     code_folding: hide
 ---
 
@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(tidyverse)
 library(here)
 library(lubridate)
+library(feasts)
 ```
 ## Overview {.tabset}
 -An engaging image (with caption, incl. photo credit) that is relevant to the dataset
@@ -26,29 +27,100 @@ library(lubridate)
 fish <- read_csv(here("data","willamette_fish_passage.csv")) %>% 
   janitor::clean_names() %>% 
   select(date, steelhead, coho, jack_coho) %>% #selecting for the fish of interest 
-  replace(is.na(.),0) %>%  #replacing nas with 0 
-  mutate(date = lubridate::mdy(date)) #making my date column class: date 
+  replace(is.na(.),0)   #replacing nas with 0 
+ 
 
   
 #Now I need to covert the df to tsibble (a times series df )
 fish_ts <- fish %>% 
-  as_tibble(key = NULL, index = date)
+  mutate(date = lubridate::mdy(date)) %>%  #making my date column class: date 
+  as_tsibble(key = NULL, index = date)
 
 # pivot data so species is in same column 
 fish_ts_pivot <- fish_ts %>% 
   pivot_longer(cols = 2:4, names_to = "species", values_to = "count")
 
 
+## Making a vector for easy facet wrap plot labels
+species_vect <- c("Coho", "Jack Coho", "Steelhead")
+names(species_vect) <- c("coho", "jack_coho", "steelhead")
+
+
 ## Now i can visualize the data 
 ggplot(data = fish_ts_pivot, aes(x = date, y = count, color = species)) +
   geom_line() + 
-  facet_wrap(~species, nrow = 3)
+  facet_wrap(~species, nrow = 3,
+             strip.position = 'right',
+             labeller = labeller(species = species_vect)) + 
+  ## customize axis with cont 'date' class data (Thank you to Nick for showing me this)
+  scale_x_date(limits = as.Date(c('2001-01-01', '2010-12-31')),
+               date_breaks = "1 year",
+               date_labels = "%Y") +
+  scale_color_manual(values = c("#ff9ea2", "#dbb6d6", "#4c8481")) +
+  theme_minimal() +
+  theme(panel.grid.minor.y = element_blank(),
+    strip.text = element_text(face = 'bold'),
+    strip.background = element_rect(fill = "#dbb6d6"),
+    legend.position = "none")
 
 ```
 
 
-### tab 2
+### Seasonplots
 (content)
+```{r}
+# make the seasonplot with gg_season()
 
-### tab 3 
-(content)
+
+fish_ts_pivot  %>% 
+  gg_season(y = count,
+            pal = c('#ff9ea2', '#dbb6d6', '#4c8481', '#3b444f')) +
+  facet_wrap(~species, nrow = 3, strip.position = 'right',
+             labeller = labeller(species = species_vect)) +
+  labs(x = element_blank(),
+       y = 'Daily fish count') +
+  scale_x_date(date_breaks = "1 month",
+               date_labels = "%b") +
+  theme_bw() +
+    theme(
+    axis.title = element_text(face = 'bold'),
+    panel.grid.minor.y = element_blank(),
+    strip.text = element_text(face = 'bold'),
+    strip.background = element_rect(fill = '#dbb6d6'),
+    legend.background = element_blank(),
+    legend.text = element_text(size = 9),
+    legend.position = c(0.08, 0.85),
+    legend.key.size = unit(0.9, 'line')
+  )
+
+```
+
+
+
+### Annual counts by species
+```{r}
+## create a new df that holds annual total by species 
+fish_count_yr <- as.data.frame(fish_ts_pivot) %>% 
+  mutate(year = lubridate::year(date)) %>% 
+  select(-date) %>% 
+  group_by(year, species) %>% 
+  summarize(year_count = sum(count))
+
+## vizualize annual counts of 3 species 
+ggplot(data = fish_count_yr, aes(x = year, y = year_count)) +
+  geom_col(aes(fill = species),
+           color = "#3b444f") +
+  scale_fill_manual(values = c("#ff9ea2", "#dbb6d6", "#4c8481" ),
+                   labels = c("Coho", "Jack Coho", "Steelhead")) +
+scale_x_continuous(breaks = seq(from = 2001, to = 2010, by = 1),
+                     expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  labs(x = element_blank(),
+       y = "Annual Counts") +
+  theme_minimal() +
+  theme(
+    legend.title = element_blank()
+  )
+  
+```
+
