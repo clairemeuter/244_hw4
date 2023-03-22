@@ -180,7 +180,4 @@ ggplot(data = speech_joy_counts,
   theme_minimal()
 ```
 
-**Figure 4.** Count of negative and positive words as based on the Bing lexicon from Branstetter's essay for ACLU.
-
-### Conclusion: 
-Knowles speech 
+**Figure 4.** Count of negative and positive words as based on the Bing lexicon from Branstetter's essay for ACLU. Knowles speech has a higher ratio of negative words than Branstettter's essay. 
