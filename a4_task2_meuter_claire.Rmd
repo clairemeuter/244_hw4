@@ -16,10 +16,24 @@ library(lubridate)
 library(feasts)
 ```
 ## Overview {.tabset}
--An engaging image (with caption, incl. photo credit) that is relevant to the dataset
--A brief summary (3 - 4 sentences) of the dataset, and what is included in this report
--A map of the fish ladder location (you can make this in R on your own, or include an existing map appropriately licensed, with attribution)
--A professionally formatted data citation
+
+This project explores data recorded by the Willamette Falls Fish Ladder from 2001 to 2010. We explored adult fish passage through the fish ladder for three salmon species: coho, jack coho, and steelhead.
+
+This report includes:
+
+- An original times series for adult passage for coho, jack coho, and steelhead salmon. 
+- Seasonplots of each species.
+- Annual counts of each species, by year. 
+
+
+![Migrating Salmon. Credit: *Alex Mustard/Getty Images*](salmon.webp)
+
+
+![Map of the Willamette Falls Fish Ladder. Credit: *Department of Defense*](falls.webp)
+
+
+Citation: Columbia River DART (Data Access in Real Time), 2010. Data Courtesy of U.S. Army Corps of Engineers, NWD and Chelan, Douglas, and Grant County PUDs, Yakima Klickitat Fisheries Project, Colville Tribes Fish & Wildlife (OBMEP), Oregon Department of Fish & Wildlife, Washington Department of Fish & Wildlife. http://www.cbr.washington.edu/dart/query/adult_graph_text
+
 
 ### Original Time Series 
 ```{r}
@@ -64,6 +78,12 @@ ggplot(data = fish_ts_pivot, aes(x = date, y = count, color = species)) +
     legend.position = "none")
 
 ```
+**Figure 1.** Time series of Coho, Jack Coho, and Steelhead counts on the Willamette fish ladder between 2001 and 2010.
+
+Notable Trends: 
+
+- Steelhead seems to have the widest seasonality and access the fish ladder more than the other two species. 
+- Coho accessing the ladder seem to be increasing from 2001 to 2005. 
 
 
 ### Seasonplots
@@ -95,6 +115,13 @@ fish_ts_pivot  %>%
 
 ```
 
+**Figure 2.** Seasonplots of Coho, Jack Coho, and Steelhead accessing the Willamette Fish Ladder. Line color indicates year. 
+
+Notable Trends: 
+
+- Coho and Coho Jack utilize the fish ladder from September to November. 
+- Coho has higher daily fish counts in 2010 that recent years. 
+- Steelhead utilize the fish ladder much more frequently than Coho and Jack Coho. Peak activity ranges from February through July. 
 
 
 ### Annual counts by species
@@ -124,3 +151,10 @@ scale_x_continuous(breaks = seq(from = 2001, to = 2010, by = 1),
   
 ```
 
+**Figure 3.** Annual counts of salmon by species, from 2001 to 2010. 
+
+Notable Trends: 
+
+- Coho counts have increased from 2001 to 2010. 
+- Jack Coho counts have been highly variable over the years, with no clear pattern. They are much less common than the Coho and Steelhead. 
+- Steelhead does not have a clear trend. 2002 was the best year for the Steelhead, but 2010 did well in comparison to a slight dip in count from 2007 to 2009. Steelhead are the most abundant species we see at this fish ladder. 
