@@ -20,18 +20,40 @@ library(readtext)
 ```
 
 ## Overview
+### Background on Transgender Political Tensions in America 
+In recent months, trans people across America have been subject to hateful rhetoric, especially from the conservative right. One recent example of this is Michael Knowles speech to CPAC in early March, in which Knowles made hateful comments, including a call for the "eradication of 'Transgenderism'."  
+
+However, in the face of hate and bigotry from the right, trans people in America continue to fight for their rights to freely express themselves. Trans activists have made a call to their community to express and embrace themselves while tending to their "trans joy." 
+
+In an ACLU post, Gillian Branstetter discusses the importance of trans joy in this hostile political environment, by examining the social influence of Dylan Mulvaney, a transgender woman and social media influencer. Branstetter argues that "Trans joy, in particular, can be revolutionary in and of itself." 
+
+### About this Analysis 
+In this text analysis, I compare Knowles speech to Branstetter's essay by using word clouds and via sentiment analysis, using the Bing lexicon. 
+
+
+
+Citation: 
+Branstetter, G. (2023, February 24). Trans joy is most necessary when it feels the most impossible: ACLU. American Civil Liberties Union. Retrieved March 21, 2023, from https://www.aclu.org/news/lgbtq-rights/trans-joy-is-most-necessary-when-it-feels-the-most-impossible 
+
+Knowles, M. (2023, March 7). Michael Knowles full speech CPAC 2023 speech on "transgenderism." YouTube. Retrieved March 21, 2023, from https://www.youtube.com/watch?v=ybzjYHOhjbI 
+
+Wade, P. (2023, March 6). CPAC speaker calls for eradication of 'transgenderism' -- and somehow claims he's not calling for elimination of transgender people. Rolling Stone. Retrieved March 21, 2023, from https://www.rollingstone.com/politics/politics-news/cpac-speaker-transgender-people-eradicated-1234690924/ 
+
+
+
 ```{r}
 #read in the text with readtext()
 hate_txt <- pdf_text(here::here("data", "trans_hate_transcript.pdf"))
 
-## wrangle txt into a dataframe
+
+## wrangle hate txt into a dataframe
 hate_df <- data.frame(hate_txt) %>% 
   mutate(page = 1:n()) %>% 
   mutate(text_full = str_split(hate_txt, pattern = '\\n')) %>% 
   unnest(text_full) %>% 
   mutate(text_full = str_squish(text_full))
 
-## tidying this data further, unnesting the words 
+## tidying this hate data further, unnesting the words 
 hate_df_clean <- hate_df %>% 
   # #split up words here
   unnest_tokens(word, text_full, token = 'words') %>% 
@@ -43,7 +65,7 @@ hate_speech_clean <- hate_df_clean %>%
   anti_join(stop_words, by = 'word') # dropping stop_words
 
 
-#Now I can count the top 30 most used words in this speech (excluding stop words)
+#Now I can count the top 30 most used words in this hate speech (excluding stop words)
 # first I need to count the words overall
 hate_wordcount <- hate_speech_clean %>% 
   count(word)
@@ -59,11 +81,56 @@ hate_cloud <- ggplot(data = hate_speech_top_30, aes(label = word)) +
   theme_minimal()
 
 hate_cloud
+```
+
+**Figure 1.** Word cloud of 30 top words used in Knowles speech to CPAC. The word "transgenderism" is generally not used by the LGBTQ+ community. 
+
+```{r}
+# now I'm going to do the same thing but based on the article about trans joy 
+trans_joy <- pdf_text(here::here("data","trans_joy.pdf"))
+
+## wrangle joy txt into a dataframe
+joy_df <- data.frame(trans_joy) %>% 
+   mutate(page = 1:n()) %>% 
+   mutate(text_full = str_split(trans_joy, pattern = '\\n')) %>% 
+   unnest(text_full) %>% 
+   mutate(text_full = str_squish(text_full))
+
+## tidying this hate data further, unnesting the words 
+joy_df_clean <- joy_df %>% 
+  # #split up words here
+  unnest_tokens(word, text_full, token = 'words') %>% 
+  select(word) #keeping only the word column 
+
+
+# Next I remove stop words, basically words in english that are super common
+joy_speech_clean <- joy_df_clean %>% 
+  anti_join(stop_words, by = 'word') # dropping stop_words
+
+
+#Now I can count the top 30 most used words in this hate speech (excluding stop words)
+# first I need to count the words overall
+joy_wordcount <- joy_speech_clean %>% 
+  count(word)
+
+#next i find the top 30 
+joy_speech_top_30 <- joy_wordcount %>% 
+  slice_max(order_by = n, n = 30)
+
+joy_cloud <- ggplot(data = joy_speech_top_30, aes(label = word)) +
+  geom_text_wordcloud(
+    aes(color = n, size = n),  grid_size = 0.5, shape = "diamond") + 
+  scale_color_gradientn(colors = c("darkblue","blue","pink")) +
+  theme_minimal()
+
+joy_cloud
 
 ```
 
-## Sentiment analysis
-For this sentiment analysis, I will be using the bing lexicon. This lexicon uses a list of english words and their associations with positive and negative categories. 
+**Figure 2.** Word cloud of 30 top words used in Branstetter's essay for ACLU. 
+
+### Sentiment analysis
+For this sentiment analysis, I will be using the Bing lexicon. This lexicon uses a list of English words and their associations with positive and negative categories. 
 
 ```{r}
 # first I'll read in the lexicon 
@@ -79,33 +146,41 @@ speech_rc_counts <- speech_bing %>%
 
 ## visualize 
 ggplot(data = speech_rc_counts, 
-       aes(x = n, y = reorder(sentiment,n))) +
+       aes(x = n, y = reorder(sentiment,n), fill= sentiment)) +
   geom_col() +
+  labs(x = "Word Count",
+       y = element_blank()) +
   scale_fill_manual(values = c("positive"="forestgreen", "negative"="darkred")) +
   theme_minimal()
 ```
 
+**Figure 3.** Count of negative and positive words as based on the Bing lexicon from Knowles speech to CPAC. 
 
-#adding 'transgenderism' to the bing lexicon with a negative association
+
 
 ```{r}
-new_row = c(word = "transgenderism", sentiment = "negative")
-
-bing_trans = rbind(bing, new_row)
+# first I'll read in the lexicon 
+bing <- get_sentiments(lexicon = "bing")
 
 #join the words to their associated sentiment 
-speech_bing2 <- hate_speech_clean %>% 
-  inner_join(bing_trans, by = "word")
+speech_bing_joy <- joy_speech_clean %>% 
+  inner_join(bing, by = "word")
 
 #now I'll count the number of words for each sentiment 
-speech_rc_counts2 <- speech_bing2 %>% 
+speech_joy_counts <- speech_bing_joy %>% 
   count(sentiment)
 
 ## visualize 
-ggplot(data = speech_rc_counts2, 
-       aes(x = n, y = reorder(sentiment,n))) +
+ggplot(data = speech_joy_counts, 
+       aes(x = n, y = reorder(sentiment,n), fill= sentiment)) +
   geom_col() +
+  labs(x = "Word Count",
+       y = element_blank()) +
   scale_fill_manual(values = c("positive"="forestgreen", "negative"="darkred")) +
   theme_minimal()
 ```
 
+**Figure 4.** Count of negative and positive words as based on the Bing lexicon from Branstetter's essay for ACLU.
+
+### Conclusion: 
+Knowles speech 
